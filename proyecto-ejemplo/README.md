@@ -278,15 +278,30 @@ En nuestro caso, el `devcontainer.json` está configurado para:
 
 **Pasos para usar Dev Containers en VS Code:**
 
-1.  **Asegúrate de tener la extensión "Remote - Containers" instalada** en VS Code.
-2.  Abre el proyecto (la raíz del repositorio `dockerized-dev-environment`) en VS Code.
-3.  VS Code podría mostrarte una notificación preguntando si quieres "Reopen in Container" porque detecta la configuración de `.devcontainer`. Si es así, puedes hacer clic en ella.
-4.  Si no ves la notificación, abre la Paleta de Comandos (Ctrl+Shift+P o Cmd+Shift+P en macOS).
-5.  Escribe y selecciona una de las siguientes opciones:
-    *   **"Dev Containers: Reopen in Container"**: Si ya tienes el proyecto abierto.
-    *   **"Dev Containers: Open Folder in Container..."**: Para abrir la carpeta `proyecto-ejemplo` (o la raíz del repo si quieres que el `devcontainer.json` aplique a todo) directamente en un contenedor.
-6.  VS Code construirá la imagen (si es la primera vez o si el `Dockerfile` ha cambiado), iniciará el contenedor y se conectará a él. Esto puede tardar un poco la primera vez.
-7.  Una vez cargado, VS Code se verá igual, pero ahora estarás trabajando *dentro* del contenedor. El terminal integrado de VS Code será un shell dentro del contenedor, y cuando ejecutes o depures tu código Python, se ejecutará dentro del entorno definido por el `Dockerfile`.
+1.  **Asegúrate de tener la extensión "Remote - Containers" instalada** en VS Code (busca `ms-vscode-remote.remote-containers` en el panel de Extensiones e instálala si no lo has hecho).
+2.  Abre el proyecto (la raíz del repositorio `dockerized-dev-environment` o directamente la carpeta `proyecto-ejemplo`) en VS Code.
+3.  VS Code es bastante inteligente y, al detectar la carpeta `.devcontainer` con un archivo `devcontainer.json` válido, a menudo te mostrará una **notificación emergente** en la esquina inferior derecha preguntando si quieres "Reopen in Container". Si aparece, simplemente haz clic en ese botón. ¡Es la forma más rápida!
+
+    ![Notificación de VS Code para reabrir en contenedor](https://code.visualstudio.com/assets/docs/remote/containers/reopen-in-container-toast.png)
+    *(Imagen de ejemplo de la notificación de VS Code)*
+
+4.  **Usando la Paleta de Comandos (F1 o Ctrl+Shift+P):** Si no ves la notificación, o si ya la has descartado, puedes usar la Paleta de Comandos:
+    *   Presiona `F1` (o `Ctrl+Shift+P` / `Cmd+Shift+P` en macOS) para abrir la Paleta de Comandos.
+    *   Comienza a escribir `Dev Containers` para filtrar la lista de comandos. Verás varias opciones útiles:
+        *   **`Dev Containers: Reopen in Container`**: Utiliza esta opción si ya tienes la carpeta del proyecto abierta en VS Code y quieres cambiar al modo contenedor. VS Code se reiniciará y abrirá el proyecto dentro del contenedor definido.
+        *   **`Dev Containers: Open Folder in Container...`**: Te permitirá seleccionar una carpeta de tu sistema de archivos y VS Code la abrirá directamente dentro de un contenedor (creándolo si es necesario según la configuración del `devcontainer.json` que encuentre en esa carpeta).
+        *   **`Dev Containers: Rebuild Container`**: Es muy útil si has hecho cambios en tu `Dockerfile` o en el `devcontainer.json` (por ejemplo, añadir una nueva extensión o dependencia). Este comando reconstruirá la imagen Docker (si es necesario) y reiniciará el contenedor con la nueva configuración. Los cambios en el código fuente se mantienen gracias al montaje de volúmenes.
+        *   **`Dev Containers: Rebuild Without Cache`**: Similar a la anterior, pero fuerza la reconstrucción de la imagen Docker desde cero, sin usar las capas de caché. Útil si sospechas que la caché de Docker está causando problemas.
+
+5.  VS Code construirá la imagen Docker (si es la primera vez, si has usado `Rebuild Container`, o si el `Dockerfile` ha cambiado), iniciará el contenedor y se conectará a él. Este proceso puede tardar unos minutos la primera vez, pero las veces subsiguientes suele ser mucho más rápido gracias al uso de la caché de Docker.
+6.  Una vez cargado, VS Code se verá prácticamente igual, pero notarás una indicación en la esquina inferior izquierda de la barra de estado (generalmente de color verde) que dice algo como "Dev Container: Proyecto Ejemplo DEV Container (Dockerfile)". Esto confirma que estás trabajando *dentro* del contenedor. El terminal integrado de VS Code (Ctrl+`Ñ` o el que uses) será un shell dentro del contenedor, y cuando ejecutes o depures tu código Python, se ejecutará dentro del entorno definido por el `Dockerfile`.
+
+**Volver a abrir el proyecto localmente:**
+
+Si estás trabajando dentro de un Dev Container y quieres volver a abrir el proyecto en tu entorno local (fuera de Docker), puedes hacerlo de varias maneras:
+*   **Desde la Paleta de Comandos (F1):** Busca y selecciona **`Dev Containers: Reopen Folder Locally`**.
+*   **Desde el indicador de Dev Container:** Haz clic en el indicador verde en la esquina inferior izquierda de la barra de estado y selecciona "Reopen Folder Locally" en el menú que aparece.
+*   Simplemente **cierra la ventana de VS Code** y vuelve a abrir la carpeta del proyecto de la forma habitual desde tu sistema de archivos.
 
 **Ventajas de usar Dev Containers:**
 *   **Integración completa:** Todo tu entorno de VS Code (terminal, depuración, IntelliSense, extensiones) funciona de forma nativa dentro del contenedor.
