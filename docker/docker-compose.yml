@@ -1,0 +1,95 @@
+# Versión del formato del archivo Docker Compose. '3.8' es una versión común y moderna.
+version: '3.8'
+
+# Define los servicios que componen tu aplicación.
+# Un servicio es un contenedor en ejecución definido por una imagen y una configuración.
+services:
+  # Nombre del primer servicio (puedes llamarlo como quieras, ej: app, web, backend)
+  mi_aplicacion_web:
+    # Instrucciones para construir la imagen de este servicio:
+    build:
+      context: . # Directorio que contiene el Dockerfile (el directorio actual)
+      # dockerfile: Dockerfile # Opcional: especifica un nombre de Dockerfile diferente si no es "Dockerfile"
+    # Alternativamente, si ya tienes una imagen en Docker Hub o un registro privado:
+    # image: tu_usuario/tu_imagen:tag
+
+    # Puertos: Mapea puertos del host a puertos del contenedor.
+    # "HOST:CONTENEDOR"
+    # Ejemplo: expone el puerto 5000 del contenedor al puerto 5000 de tu máquina.
+    ports:
+      - "5000:5000"
+      # - "OTRO_PUERTO_HOST:OTRO_PUERTO_CONTENEDOR"
+
+    # Volúmenes: Persiste datos o monta código fuente.
+    volumes:
+      # Monta el directorio actual (código fuente) en /app dentro del contenedor.
+      # Esto es muy útil para desarrollo, ya que los cambios en tu código
+      # se reflejan inmediatamente en el contenedor sin necesidad de reconstruir la imagen.
+      - .:/app
+      # Ejemplo de un volumen con nombre para persistir datos (ej: base de datos):
+      # - datos_db:/var/lib/mysql
+      # (Deberías definir "datos_db" en la sección `volumes` al final del archivo).
+
+    # Variables de entorno: Define variables de entorno para el servicio.
+    environment:
+      - MODO_EJECUCION=desarrollo
+      - API_KEY_EJEMPLO=tu_api_key_aqui # ¡Cuidado con subir claves reales a Git!
+      # - NOMBRE_DB_HOST=db # Ejemplo si tienes otro servicio llamado "db"
+      # - USUARIO_DB=usuario_ejemplo
+
+    # Comando por defecto a ejecutar cuando el servicio/contenedor inicie.
+    # Esto anula el CMD del Dockerfile si se especifica aquí.
+    # command: ["python", "./tu_script_alternativo.py"]
+
+    # Dependencias: Especifica que este servicio depende de otros servicios.
+    # Docker Compose iniciará los servicios en el orden de dependencia.
+    # Sin embargo, `depends_on` solo espera a que el contenedor se inicie,
+    # no a que la aplicación dentro del contenedor esté lista.
+    # depends_on:
+    #   - db_servicio
+    #   - redis_servicio
+
+    # Reinicio: Política de reinicio para el contenedor.
+    # "no" (por defecto): no reiniciar.
+    # "always": siempre reiniciar.
+    # "on-failure": reiniciar solo si falla (código de salida no cero).
+    # restart: on-failure
+
+  # Ejemplo de un segundo servicio (ej: una base de datos)
+  # db_servicio:
+  #   image: postgres:13-alpine # Usa una imagen oficial de PostgreSQL
+  #   ports:
+  #     - "5432:5432" # Mapea el puerto de PostgreSQL
+  #   environment:
+  #     POSTGRES_USER: miusuario
+  #     POSTGRES_PASSWORD: misupercontraseña
+  #     POSTGRES_DB: mi_base_de_datos
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   restart: always
+
+  # Ejemplo de un tercer servicio (ej: un servicio de cache como Redis)
+  # redis_servicio:
+  #   image: redis:6-alpine
+  #   ports:
+  #     - "6379:6379"
+  #   restart: always
+
+# Volúmenes con nombre (opcional, si los usas en tus servicios).
+# Estos volúmenes son gestionados por Docker y persisten los datos
+# incluso si los contenedores se eliminan.
+# volumes:
+#   datos_db: # Nombre del volumen usado arriba para el servicio db_servicio
+#   postgres_data: # Nombre del volumen usado arriba para el servicio db_servicio
+
+# Redes (opcional, Docker Compose crea una red por defecto para los servicios).
+# Puedes definir redes personalizadas si necesitas configuraciones específicas.
+# networks:
+#   mi_red_personalizada:
+#     driver: bridge
+
+# **NOTA IMPORTANTE PARA PRINCIPIANTES:**
+# Este docker-compose.yml es un ejemplo. Deberás adaptarlo a los servicios
+# que tu aplicación necesite, los puertos que usen, las variables de entorno,
+# y los volúmenes para persistencia.
+# Comenta/descomenta y modifica las secciones según sea necesario.

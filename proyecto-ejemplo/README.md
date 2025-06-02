@@ -1,0 +1,314 @@
+# Guía del Proyecto de Ejemplo: Resolución de Problema de Optimización con Pyomo y Docker
+
+¡Bienvenido/a al proyecto de ejemplo! Aquí pondremos en práctica lo que hemos aprendido sobre VS Code, Git, GitHub y Docker, aplicándolo a un problema de optimización matemática con Pyomo.
+
+Vamos a crear un script de Python que utiliza Pyomo para definir y resolver un problema de Programación Lineal (PL) sencillo. Este script se ejecutará dentro de un contenedor Docker.
+
+## 1. Objetivos del Proyecto
+
+*   Definir un problema de optimización lineal simple usando Pyomo.
+*   Resolver el problema utilizando el solver GLPK.
+*   Crear un `Dockerfile` para empaquetar este script de Pyomo y sus dependencias (incluyendo el solver GLPK).
+*   Gestionar el código fuente con Git y subirlo a un repositorio de GitHub.
+*   Usar VS Code como nuestro editor de código.
+
+## 2. Prerrequisitos
+
+Asegúrate de tener instalado:
+
+*   Visual Studio Code (con la extensión de Python recomendada: `ms-python.python`).
+*   Git.
+*   Docker (Docker Desktop en Windows/macOS o Docker Engine en Linux).
+*   Una cuenta de GitHub.
+
+Si has seguido los módulos anteriores, ¡ya deberías tener todo listo!
+
+## 3. Estructura de Archivos del Proyecto Ejemplo
+
+Dentro de esta carpeta (`/proyecto-ejemplo`), tendremos la siguiente estructura:
+
+```
+/proyecto-ejemplo
+|-- README.md           # Esta guía que estás leyendo
+|-- app.py              # El script de Python con el modelo Pyomo
+|-- requirements.txt    # Las dependencias de Python (Pyomo)
+|-- Dockerfile          # Las instrucciones para construir la imagen Docker
+|-- .gitignore          # (Opcional) Para ignorar archivos como venv, __pycache__
+```
+
+## 4. El Problema de Optimización
+
+Vamos a resolver el siguiente problema de Programación Lineal:
+
+**Maximizar:** `Z = 2x + 3y`
+
+**Sujeto a las restricciones:**
+1.  `x + y <= 4`
+2.  `2x + y <= 5`
+3.  `x >= 0`
+4.  `y >= 0`
+
+La solución óptima esperada es `x = 1`, `y = 3`, con un valor objetivo `Z = 11`.
+
+## 5. Paso a Paso: Creación del Proyecto
+
+### Paso 5.1: Configurar el Repositorio Git
+
+Si este `proyecto-ejemplo` es una subcarpeta de un repo más grande del curso, simplemente asegúrate de estar trabajando dentro de esta carpeta. Si quieres tratarlo como un proyecto individual:
+1.  Crea un nuevo repositorio en GitHub.
+2.  Clónalo: `git clone <URL_DEL_REPO>`.
+3.  Navega a la carpeta: `cd <NOMBRE_DEL_REPO>`.
+
+### Paso 5.2: Crear el Archivo de Dependencias (`requirements.txt`)
+
+Este archivo especifica los paquetes de Python necesarios.
+
+Contenido para `requirements.txt`:
+
+```txt
+Pyomo>=6.0
+```
+*(GLPK, el solver, se instalará a través del Dockerfile, no directamente con pip aquí).*
+
+### Paso 5.3: Crear el Script de Pyomo (`app.py`)
+
+Este archivo contendrá el código Python para definir y resolver el problema de optimización.
+
+Contenido para `app.py`:
+
+```python
+import pyomo.environ as pyo
+
+def solve_simple_lp():
+    # ... (el código de Pyomo que ya generamos anteriormente)
+    # 1. Crear un modelo concreto
+    model = pyo.ConcreteModel(name="Simple LP Problem")
+
+    # 2. Definir las variables de decisión
+    model.x = pyo.Var(domain=pyo.NonNegativeReals)
+    model.y = pyo.Var(domain=pyo.NonNegativeReals)
+
+    # 3. Definir la función objetivo
+    model.objective = pyo.Objective(expr=2 * model.x + 3 * model.y, sense=pyo.maximize)
+
+    # 4. Definir las restricciones
+    model.constraint1 = pyo.Constraint(expr=model.x + model.y <= 4)
+    model.constraint2 = pyo.Constraint(expr=2 * model.x + model.y <= 5)
+
+    print("Modelo de Pyomo creado:")
+    model.pprint()
+    print("-------------------------------------")
+
+    # 5. Resolver el problema
+    solver = pyo.SolverFactory('glpk')
+    results = solver.solve(model, tee=True)
+
+    print("-------------------------------------")
+    print("Resultados de la optimización:")
+    if (results.solver.status == pyo.SolverStatus.ok) and \
+       (results.solver.termination_condition == pyo.TerminationCondition.optimal):
+        print("¡Solución óptima encontrada!")
+        print(f"Valor de x: {pyo.value(model.x)}")
+        print(f"Valor de y: {pyo.value(model.y)}")
+        print(f"Valor óptimo de la función objetivo: {pyo.value(model.objective)}")
+    elif results.solver.termination_condition == pyo.TerminationCondition.infeasible:
+        print("El problema es infactible.")
+    else:
+        print(f"Estado del solver: {results.solver.status}")
+        print(f"Condición de terminación: {results.solver.termination_condition}")
+
+    return results
+
+if __name__ == '__main__':
+    print("Iniciando la resolución del problema de optimización con Pyomo...")
+    solve_simple_lp()
+    print("Proceso de optimización finalizado.")
+```
+
+### Paso 5.4: Crear el `Dockerfile`
+
+Este archivo instruye a Docker sobre cómo construir la imagen para nuestro script.
+
+Contenido para `Dockerfile`:
+
+```dockerfile
+# 1. Usar una imagen base oficial de Python
+FROM python:3.9-slim
+
+# Instalar GLPK (GNU Linear Programming Kit)
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends glpk-utils && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# 2. Establecer el directorio de trabajo dentro del contenedor
+WORKDIR /app
+
+# 3. Copiar el archivo de dependencias e instalar las dependencias de Python
+COPY requirements.txt .
+RUN pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
+
+# 4. Copiar el resto del código de la aplicación al directorio de trabajo
+COPY . .
+
+# 5. Comando para ejecutar la aplicación cuando el contenedor inicie
+CMD ["python", "app.py"]
+```
+
+### Paso 5.5: (Opcional) Crear un Archivo `.gitignore`
+
+Para evitar subir archivos innecesarios como entornos virtuales locales (`venv`) o archivos compilados de Python (`__pycache__`, `*.pyc`):
+
+```
+venv/
+__pycache__/
+*.pyc
+```
+
+### Paso 5.6: Construir la Imagen Docker
+
+Abre tu terminal en la carpeta `proyecto-ejemplo` (donde está tu `Dockerfile`).
+
+Ejecuta el comando para construir la imagen. La llamaremos `mi-pyomo-solver` con la etiqueta `1.0`:
+
+```bash
+docker build -t mi-pyomo-solver:1.0 .
+```
+
+Verifica que la imagen se haya creado:
+`docker images` (deberías ver `mi-pyomo-solver` en la lista).
+
+### Paso 5.7: Ejecutar el Contenedor Docker
+
+Ahora que tenemos la imagen, podemos ejecutar un contenedor a partir de ella:
+
+```bash
+docker run --rm mi-pyomo-solver:1.0
+```
+
+**Explicación del comando `docker run`:**
+
+*   `--rm`: Esta opción es útil porque elimina automáticamente el contenedor cuando termina de ejecutarse. Como es un script que produce una salida y finaliza, no necesitamos que el contenedor persista.
+*   `mi-pyomo-solver:1.0`: El nombre y etiqueta de la imagen que quieres ejecutar.
+
+**Salida Esperada:**
+
+Al ejecutar el comando, deberías ver la salida de Pyomo y GLPK, incluyendo:
+*   La estructura del modelo (`model.pprint()`).
+*   Los logs del solver GLPK.
+*   Los resultados de la optimización, que deberían indicar:
+    *   ¡Solución óptima encontrada!
+    *   Valor de x: 1.0
+    *   Valor de y: 3.0
+    *   Valor óptimo de la función objetivo: 11.0
+
+### Paso 5.8: Guardar tus Cambios en Git y GitHub
+
+1.  **Verifica el estado de Git:** `git status`
+2.  **Añade los archivos al área de preparación:** `git add .`
+3.  **Haz un commit:** `git commit -m "Actualiza proyecto ejemplo a Pyomo con Docker"`
+4.  **Sube los cambios a GitHub:** `git push` (o `git push -u origin main` si es la primera vez).
+
+¡Listo! Ahora tienes un proyecto de ejemplo que resuelve un problema de optimización usando Pyomo y GLPK, todo empaquetado y ejecutable con Docker.
+
+## 6. Desarrollo Interactivo con Docker y VS Code
+
+Hasta ahora hemos visto cómo construir una imagen Docker y ejecutar nuestro script de Pyomo como un proceso que se inicia, se ejecuta y termina. Pero, ¿qué pasa si queremos desarrollar activamente nuestro script, haciendo cambios y probándolos rápidamente sin tener que reconstruir la imagen Docker cada vez? Para esto, podemos usar contenedores de desarrollo.
+
+### 6.1. ¿Por qué Docker para el Desarrollo?
+
+Usar Docker durante el desarrollo ofrece varias ventajas:
+
+*   **Consistencia:** Desarrollas en el mismo entorno (o uno muy similar) al que se usará en producción o para la ejecución final. Esto reduce los problemas de "funciona en mi máquina pero no en otra".
+*   **Aislamiento:** Todas las dependencias (Python, Pyomo, GLPK, bibliotecas del sistema) están contenidas y no interfieren con tu sistema operativo principal ni con otros proyectos.
+*   **Reproducibilidad:** Es fácil para otros colaboradores (¡o para ti mismo en el futuro!) replicar el entorno de desarrollo.
+
+### 6.2. Ejecutar un Contenedor de Desarrollo Interactivo
+
+Podemos usar la misma imagen Docker que construimos (`mi-pyomo-solver:1.0`) pero ejecutarla de una manera que nos permita interactuar con ella y que nuestros cambios en el código fuente local se reflejen dentro del contenedor.
+
+Abre tu terminal en la carpeta `proyecto-ejemplo` y ejecuta:
+
+```bash
+docker run -it --rm -v "$(pwd):/app" mi-pyomo-solver:1.0 /bin/bash
+```
+
+Si estás en Windows y usas PowerShell, el comando sería:
+```powershell
+docker run -it --rm -v "${PWD}:/app" mi-pyomo-solver:1.0 /bin/bash
+```
+
+**Explicación del comando `docker run` para desarrollo:**
+
+*   `-it`:
+    *   `-i` (interactive): Mantiene la entrada estándar (STDIN) abierta, permitiéndonos escribir comandos dentro del contenedor.
+    *   `-t` (tty): Asigna una pseudo-terminal, lo que nos da un prompt de shell interactivo.
+*   `--rm`: Elimina automáticamente el contenedor cuando salimos de él (cuando ejecutamos `exit` en el shell del contenedor). Esto es útil para no dejar contenedores parados innecesariamente.
+*   `-v "$(pwd):/app"` (o `-v "${PWD}:/app"` en PowerShell): Esto es un **montaje de volumen (bind mount)**.
+    *   `"$(pwd)"` (o `"${PWD}"`): Representa la ruta absoluta de tu directorio actual en tu máquina host (es decir, la carpeta `proyecto-ejemplo`).
+    *   `:/app`: Se mapea al directorio `/app` dentro del contenedor (que es nuestro `WORKDIR` definido en el `Dockerfile`).
+    *   **Efecto clave:** Cualquier cambio que hagas en los archivos de `proyecto-ejemplo` en tu editor de código (VS Code) en tu máquina host se reflejará **instantáneamente** dentro del directorio `/app` del contenedor. Del mismo modo, si creas o modificas archivos dentro de `/app` desde el shell del contenedor, esos cambios se verán en tu máquina host.
+*   `mi-pyomo-solver:1.0`: El nombre y etiqueta de la imagen que queremos usar como base.
+*   `/bin/bash`: En lugar de ejecutar el `CMD` por defecto del `Dockerfile` (`python app.py`), estamos sobreescribiéndolo para iniciar un shell Bash dentro del contenedor. Esto nos da un prompt donde podemos ejecutar comandos.
+
+**Dentro del contenedor:**
+
+Una vez que ejecutes el comando, tu prompt cambiará, indicando que estás dentro del shell del contenedor (por ejemplo, `root@<id_del_contenedor>:/app#`).
+Ahora puedes:
+*   Listar archivos: `ls -la` (verás `app.py`, `requirements.txt`, etc.).
+*   Ejecutar tu script: `python app.py`.
+*   Modificar `app.py` en VS Code en tu máquina host, guardar los cambios, y volver a ejecutar `python app.py` en el shell del contenedor para ver los cambios aplicados inmediatamente.
+*   Instalar paquetes temporalmente si es necesario para alguna prueba (aunque para cambios permanentes, es mejor añadirlos al `Dockerfile` y reconstruir la imagen).
+
+Para salir del shell del contenedor y detenerlo (gracias a `--rm`), simplemente escribe `exit`.
+
+### 6.3. Desarrollo con VS Code y Dev Containers
+
+Visual Studio Code ofrece una integración aún más potente con Docker a través de su extensión "Remote - Containers" (identificador: `ms-vscode-remote.remote-containers`). Esta extensión te permite abrir tu proyecto *dentro* de un contenedor de desarrollo, haciendo que todo el entorno de VS Code (terminal, depurador, extensiones) opere directamente en el contexto del contenedor.
+
+**¿Cómo funciona?**
+
+El archivo `.devcontainer/proyecto-ejemplo/devcontainer.json` que hemos configurado en el repositorio le dice a VS Code cómo construir (o usar una imagen existente) y configurar el contenedor de desarrollo.
+
+En nuestro caso, el `devcontainer.json` está configurado para:
+1.  Usar el `proyecto-ejemplo/Dockerfile` para construir la imagen (si aún no existe una imagen con los cambios más recientes del Dockerfile).
+2.  Usar el `proyecto-ejemplo` como contexto de construcción.
+3.  Abrir la carpeta `/app` como el espacio de trabajo dentro del contenedor.
+4.  Instalar automáticamente las extensiones de VS Code listadas en `devcontainer.json` *dentro* del contenedor, para que estén disponibles en tu entorno de desarrollo aislado.
+
+**Pasos para usar Dev Containers en VS Code:**
+
+1.  **Asegúrate de tener la extensión "Remote - Containers" instalada** en VS Code.
+2.  Abre el proyecto (la raíz del repositorio `dockerized-dev-environment`) en VS Code.
+3.  VS Code podría mostrarte una notificación preguntando si quieres "Reopen in Container" porque detecta la configuración de `.devcontainer`. Si es así, puedes hacer clic en ella.
+4.  Si no ves la notificación, abre la Paleta de Comandos (Ctrl+Shift+P o Cmd+Shift+P en macOS).
+5.  Escribe y selecciona una de las siguientes opciones:
+    *   **"Dev Containers: Reopen in Container"**: Si ya tienes el proyecto abierto.
+    *   **"Dev Containers: Open Folder in Container..."**: Para abrir la carpeta `proyecto-ejemplo` (o la raíz del repo si quieres que el `devcontainer.json` aplique a todo) directamente en un contenedor.
+6.  VS Code construirá la imagen (si es la primera vez o si el `Dockerfile` ha cambiado), iniciará el contenedor y se conectará a él. Esto puede tardar un poco la primera vez.
+7.  Una vez cargado, VS Code se verá igual, pero ahora estarás trabajando *dentro* del contenedor. El terminal integrado de VS Code será un shell dentro del contenedor, y cuando ejecutes o depures tu código Python, se ejecutará dentro del entorno definido por el `Dockerfile`.
+
+**Ventajas de usar Dev Containers:**
+*   **Integración completa:** Todo tu entorno de VS Code (terminal, depuración, IntelliSense, extensiones) funciona de forma nativa dentro del contenedor.
+*   **Configuración simplificada:** No necesitas ejecutar manualmente los comandos `docker run` con todos los parámetros; VS Code lo gestiona por ti basado en `devcontainer.json`.
+*   **Portabilidad del entorno de desarrollo:** Cualquier persona con VS Code y Docker puede replicar exactamente el mismo entorno de desarrollo.
+
+Esta es la forma recomendada de trabajar en proyectos que utilizan Docker para desarrollo, especialmente cuando se usa VS Code.
+
+## 7. Consejos y Próximos Pasos
+
+*   **Probar localmente (sin Docker):**
+    Si quieres probar `app.py` directamente en tu máquina (sin Docker), necesitarás:
+    1.  Python instalado.
+    2.  Pyomo instalado (`pip install pyomo`).
+    3.  El solver GLPK instalado y accesible en el PATH de tu sistema. La instalación de GLPK varía según el sistema operativo (ej: `sudo apt install glpk-utils` en Debian/Ubuntu, descargar binarios para Windows desde winglpk.sourceforge.net, `brew install glpk` en macOS).
+    4.  Luego puedes ejecutar: `python app.py`.
+*   **Experimenta con Pyomo:** Modifica `app.py` para resolver otros problemas de optimización, añade más variables o restricciones.
+*   **Otros Solvers:** Pyomo soporta muchos otros solvers (CPLEX, Gurobi, COIN-OR CBC, etc.). Si tienes acceso a ellos, puedes intentar cambiar `SolverFactory('glpk')` por otro solver (asegurándote de que esté instalado en el contenedor si usas Docker).
+*   **Pasar datos al script:** Para problemas más complejos, podrías querer pasar datos al script (ej: desde archivos CSV) o leer parámetros desde variables de entorno.
+
+## 8. Conclusión del Módulo
+
+Este proyecto de ejemplo modificado te muestra cómo Docker puede ser útil no solo para aplicaciones web, sino también para empaquetar y distribuir herramientas de línea de comandos y scripts científicos que tienen dependencias específicas, como solvers de optimización. Además, has aprendido cómo configurar un entorno de desarrollo interactivo utilizando contenedores Docker, tanto manualmente como a través de la potente integración de VS Code Dev Containers.
+
+**[Volver al README Principal](../README.md)**

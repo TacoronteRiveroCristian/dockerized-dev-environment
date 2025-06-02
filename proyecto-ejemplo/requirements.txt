@@ -1,0 +1,5 @@
+Flask==2.3.2
+Pyomo>=6.0
+# GLPK no se instala directamente con pip de forma estándar junto con Pyomo.
+# Se instalará a través del Dockerfile con apt-get.
+# Si ejecutas esto localmente fuera de Docker, necesitarás instalar GLPK por separado.
