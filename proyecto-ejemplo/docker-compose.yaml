@@ -1,0 +1,83 @@
+services:
+  pyomo_app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pyopt_app_dev
+    working_dir: /app
+    volumes:
+      - .:/app  # Monta el código fuente actual en /app dentro del contenedor
+    # Si la app necesitara esperar a InfluxDB para iniciar (ej. para escribir datos al arranque):
+    # depends_on:
+    #   - influxdb
+    # Comando para mantener el contenedor corriendo si es necesario para desarrollo,
+    # de lo contrario, se puede omitir si solo se va a ejecutar el script manualmente.
+    # Para un Dev Container, es bueno que el servicio principal siga corriendo.
+    command: tail -f /dev/null # Mantiene el contenedor activo
+    networks:
+      - pyopt_dev_network
+    depends_on:
+      - influxdb # La app podría querer escribir en InfluxDB
+
+  influxdb:
+    image: influxdb:1.8
+    container_name: pyopt_influxdb_1_8_dev
+    ports:
+      - "8096:8086" # Puerto API
+      # InfluxDB 1.8 también expone el puerto 8083 para la interfaz de administración si la habilitas explícitamente
+      # - "8093:8083"
+    volumes:
+      - pyopt_influxdb_1_8_data_dev:/var/lib/influxdb
+    environment:
+      - INFLUXDB_DB=pyopt_bucket # Nombre de la base de datos a crear
+      - INFLUXDB_USER=pyopt_user
+      - INFLUXDB_USER_PASSWORD=pyopt_password
+      # Para habilitar la autenticación HTTP (recomendado)
+      - INFLUXDB_HTTP_AUTH_ENABLED=true
+      # Credenciales para el usuario administrador de InfluxDB (para la UI en 8083 y para crear usuarios/dbs)
+      - INFLUXDB_ADMIN_USER=admin # Usuario admin global
+      - INFLUXDB_ADMIN_PASSWORD=adminpassword # Contraseña admin global
+    restart: unless-stopped
+    networks:
+      - pyopt_dev_network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: pyopt_grafana_dev
+    ports:
+      - "3001:3000" # Puerto cambiado para evitar conflictos
+    volumes:
+      - pyopt_grafana_data_dev:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - influxdb
+    restart: unless-stopped
+    networks:
+      - pyopt_dev_network
+
+volumes:
+  pyopt_influxdb_1_8_data_dev: {}
+  pyopt_grafana_data_dev: {}
+
+networks:
+  pyopt_dev_network:
+    driver: bridge
+    name: pyopt_dev_network # Nombre explícito para la red
+
+# Opcional: definir una red personalizada si se quiere un mayor aislamiento
+# networks:
+#   dev_network:
+#     driver: bridge
+# Y luego asignar esta red a cada servicio:
+# services:
+#   pyomo_app:
+#     networks:
+#       - dev_network
+#   influxdb:
+#     networks:
+#       - dev_network
+#   grafana:
+#     networks:
+#       - dev_network

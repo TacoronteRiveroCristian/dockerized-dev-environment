@@ -310,6 +310,69 @@ Si estás trabajando dentro de un Dev Container y quieres volver a abrir el proy
 
 Esta es la forma recomendada de trabajar en proyectos que utilizan Docker para desarrollo, especialmente cuando se usa VS Code.
 
+### 6.4. Opción Avanzada: Dev Container con Docker Compose (Pyomo + InfluxDB + Grafana)
+
+Para escenarios más complejos donde tu aplicación necesita interactuar con otros servicios (como bases de datos, sistemas de mensajería, etc.), puedes definir tu entorno de desarrollo completo usando Docker Compose. Hemos creado una configuración adicional para esto.
+
+**Archivos involucrados:**
+
+*   `proyecto-ejemplo/docker-compose.yaml`: Este archivo define tres servicios:
+    *   `pyomo_app` (nombre del contenedor: `pyopt_app_dev`): Nuestro script de Pyomo.
+    *   `influxdb` (nombre del contenedor: `pyopt_influxdb_1_8_dev`): Una instancia de **InfluxDB 1.8**. Los datos persistirán en un volumen Docker llamado `pyopt_influxdb_1_8_data_dev`.
+        *   Puerto API expuesto al host: `8096` (accede vía `http://localhost:8096`)
+        *   Base de datos creada al inicio: `pyopt_bucket`
+        *   Usuario para la BD: `pyopt_user` / Contraseña: `pyopt_password`
+        *   Usuario Admin Global (para UI en 8083 si se expone, y gestión): `admin` / `adminpassword`
+        *   Autenticación HTTP habilitada.
+    *   `grafana` (nombre del contenedor: `pyopt_grafana_dev`): Una instancia de Grafana. Los datos persistirán en un volumen Docker llamado `pyopt_grafana_data_dev`.
+        *   Puerto expuesto al host: `3001` (accede vía `http://localhost:3001`)
+        *   Credenciales iniciales: Usuario `admin`, Contraseña `admin`.
+    *   Todos los servicios se ejecutan en una red Docker personalizada llamada `pyopt_dev_network`.
+*   `.devcontainer/proyecto-ejemplo-compose/devcontainer.json`: Configuración de Dev Container que usa el `docker-compose.yaml`.
+    *   Se conecta al servicio `pyomo_app`.
+    *   Levanta los servicios `influxdb` y `grafana`.
+    *   Reenvía los puertos `8096` (InfluxDB API) y `3001` (Grafana) a tu host.
+
+**¿Cómo usar esta configuración?**
+
+1.  **Asegúrate de tener la extensión "Remote - Containers" instalada** en VS Code.
+2.  Abre el proyecto (la raíz del repositorio `dockerized-dev-environment`) en VS Code.
+3.  Usa la Paleta de Comandos (`F1` o `Ctrl+Shift+P`):
+    *   Escribe y selecciona **`Dev Containers: Open Folder in Container...`**.
+    *   Cuando VS Code te pregunte qué configuración de Dev Container usar (ya que ahora tenemos dos: la basada en `Dockerfile` y la basada en `docker-compose.yaml`), **elige la que indica "(Docker Compose)"** o la que apunte a la carpeta `proyecto-ejemplo-compose`.
+    *   Alternativamente, si VS Code detecta múltiples configuraciones, podría ofrecerte directamente la opción "Reopen in Container using 'Proyecto Ejemplo DEV Container (Docker Compose)'...".
+4.  VS Code utilizará `docker-compose` para construir las imágenes necesarias (si aún no existen) y levantar todos los servicios definidos (`pyomo_app`, `influxdb`, `grafana`).
+5.  Una vez dentro, tu VS Code estará conectado al servicio `pyomo_app`. Podrás:
+    *   Desarrollar tu script `app.py` como antes.
+    *   Abrir un terminal, que te dará acceso al shell del contenedor `pyopt_app_dev`.
+    *   Acceder a InfluxDB en tu navegador en `http://localhost:8096`.
+    *   Acceder a Grafana en tu navegador en `http://localhost:3001`.
+
+**Primeros pasos con InfluxDB 1.8 y Grafana (Opcional):**
+
+*   **InfluxDB 1.8 (API en Puerto 8096):**
+    *   Puedes interactuar con la API de InfluxDB 1.8 en `http://localhost:8096` usando herramientas como `curl` o clientes de InfluxDB. Por ejemplo, para hacer ping (después de que el contenedor esté completamente iniciado y la autenticación configurada):
+        `curl -G http://localhost:8096/ping -u pyopt_user:pyopt_password`
+    *   Para escribir datos, necesitarás usar el cliente de InfluxDB para Python (`influxdb-python`) en tu script `app.py` o enviar puntos a través de la API HTTP, autenticándote con `pyopt_user` y `pyopt_password` en la base de datos `pyopt_bucket`.
+    *   InfluxDB 1.8 tiene una interfaz de administración web que se puede exponer en el puerto 8083 (descomentando la línea en `docker-compose.yaml`). Si la expones, puedes acceder con el usuario `admin` y contraseña `adminpassword` para gestionar bases de datos, usuarios, etc. desde el navegador.
+
+*   **Grafana (Puerto 3001):**
+    *   Usa las credenciales `admin`/`admin` para iniciar sesión en `http://localhost:3001`.
+    *   Puedes añadir InfluxDB 1.8 como fuente de datos ("Data Source"):
+        *   Configuration (icono de engranaje) -> Data Sources -> Add data source.
+        *   Selecciona InfluxDB.
+        *   Name: `InfluxDB_1_8_pyopt` (o el nombre que prefieras).
+        *   HTTP -> URL: `http://pyopt_influxdb_1_8_dev:8086` (Grafana usa el nombre del contenedor y el puerto interno de InfluxDB).
+        *   Auth: Activa "Basic auth".
+        *   Basic Auth Details -> User: `pyopt_user`
+        *   Basic Auth Details -> Password: `pyopt_password`
+        *   InfluxDB Details -> Database: `pyopt_bucket`
+        *   HTTP Method: GET (generalmente para consultas).
+        *   Guarda y prueba ("Save & Test"). Debería indicar "Data source is working".
+    *   Una vez configurada la fuente de datos, puedes crear dashboards y usar InfluxQL para consultar los datos de la base de datos `pyopt_bucket`.
+
+Esta configuración con Docker Compose es ideal para cuando tu proyecto crece y necesita interactuar con servicios externos, proporcionando un entorno de desarrollo completo y reproducible con todas las piezas necesarias.
+
 ## 7. Consejos y Próximos Pasos
 
 *   **Probar localmente (sin Docker):**

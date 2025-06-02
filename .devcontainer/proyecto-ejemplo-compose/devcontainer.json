@@ -1,0 +1,57 @@
+{
+    "name": "Proyecto Ejemplo DEV Container (Docker Compose)",
+    "dockerComposeFile": [
+        "../../proyecto-ejemplo/docker-compose.yaml"
+    ],
+    "service": "pyomo_app",
+    "workspaceFolder": "/app",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-python.python",
+                "ms-python.vscode-pylance",
+                "ms-toolsai.jupyter",
+                "yzhang.markdown-all-in-one",
+                "ms-python.black-formatter",
+                "njpwerner.autodocstring",
+                "ms-python.isort",
+                "ms-python.pylint",
+                "ms-python.debugpy",
+                "donjayamanne.python-extension-pack",
+                "KevinRose.vsc-python-indent",
+                "ShaneLiesegang.vscode-simple-icons-rev",
+                "atomiks.moonlight"
+            ],
+            "settings": {
+                "workbench.colorTheme": "Moonlight Italic",
+                "editor.formatOnSave": true,
+                "terminal.integrated.fontSize": 12,
+                "terminal.integrated.defaultProfile.linux": "bash", // o zsh si prefieres y está en la imagen
+                "terminal.integrated.cursorBlinking": true,
+                "terminal.integrated.copyOnSelection": true,
+                "terminal.integrated.scrollback": 5000,
+                // Configuraciones específicas para Python si son necesarias dentro del dev container
+                "python.defaultInterpreterPath": "/usr/local/bin/python",
+                "python.linting.pylintEnabled": true,
+                "python.linting.enabled": true,
+                "python.formatting.provider": "black"
+            }
+        }
+    },
+    // Mapeo de puertos para acceder a InfluxDB y Grafana desde el host
+    // Aunque ya están en docker-compose.yml, forwardPorts los hace explícitamente accesibles
+    // y VS Code puede ofrecer abrirlos en el navegador.
+    "forwardPorts": [
+        8096,
+        3001
+    ],
+    // Comando a ejecutar después de crear el contenedor (opcional)
+    // "postCreateCommand": "pip install -r requirements.txt", // No es necesario si Dockerfile ya lo hace
+    // Para asegurar que los otros servicios (influxdb, grafana) se levanten
+    "runServices": [
+        "pyomo_app",
+        "influxdb",
+        "grafana"
+    ]
+    // "shutdownAction": "stopCompose" // Para detener todos los contenedores del compose al cerrar VS Code
+}
